@@ -22,6 +22,11 @@ const LIFE_CARD_RESPONSE_SCHEMA: Schema = {
       description:
         'この人に名前（二つ名）と一言キャッチフレーズをつけた文字列。例: 「〇〇の探求者」— 〇〇から〇〇まで、〇〇する人',
     },
+    visualImagePrompt: {
+      type: Type.STRING,
+      description:
+        'この人の特徴（興味モチーフ2〜3個＋思考スタンス）を1枚の白黒モノクロ・エディトリアル線画イラスト（タロットカードや雑誌POPEYE風）として画像生成AIに描かせるための英語プロンプト（50〜80単語程度、文字なし "no text" を含める）',
+    },
     eraChapters: {
       type: Type.ARRAY,
       items: {
@@ -117,6 +122,7 @@ export function validateLifeCardProposal(
     catchphrase:
       rawProposal.catchphrase ||
       '「多面的な知的好奇心の探求者」— 疑問をデータと行動で解き明かす人',
+    visualImagePrompt: rawProposal.visualImagePrompt,
     eraChapters: (rawProposal.eraChapters || []).slice(0, 3),
     discoveries: verifiedDiscoveries.slice(0, 6),
     analysisSource: rawProposal.analysisSource,
@@ -164,6 +170,7 @@ export function buildSystemPrompt(
    - **特徴6【思考・性格スタンス診断（感情か論理か、現実か妄想・理想か、外交的か内向的か）】**：
      ※本文中に「MBTI」という単語やアルファベット分類記号は使わないこと。検索ワードの選び方、Geminiへの質問の仕方（根拠を求めるか、アイデアを広げるか等）、動画のスキップ率、マップの行動範囲から見える「どういう考え方・性格寄りか（論理か感情か、現実か理想・妄想か、外交的か内向的か）」を、実際のログやプロンプト引用を根拠に詳しく分析する。
 4. **キャッチコピー（\`catchphrase\`）**は、この人に名前をつけるならどうするか（例：「〇〇の設計者」「〇〇の探求者」）と、6つの特徴を踏まえた一言キャッチフレーズを合わせた形にしてください。
+5. **イメージ画像プロンプト（\`visualImagePrompt\`）**は、この人の代表的なモチーフ2〜3個を組み合わせたスタイリッシュな白黒モノクロ線画イラスト（"Minimalist black and white editorial ink and woodcut illustration, tarot card aesthetic, ..., high contrast monochrome line art on white paper, no text"）の英語プロンプトを作成してください。
 ${userCustom}
 【Google Takeout 実データ集計＆生ログダイジェスト】
 ${JSON.stringify(payload, null, 2)}`;

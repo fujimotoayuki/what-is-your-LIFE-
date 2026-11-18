@@ -230,6 +230,7 @@ export interface DiscoveryItem {
 
 export interface LifeCardProposal {
   catchphrase: string;
+  visualImagePrompt?: string;
   eraChapters: EraChapter[];
   discoveries: DiscoveryItem[];
   analysisSource?: 'gemini-api' | 'local-fallback';
