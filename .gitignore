@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+.env.*
+takeout-*.zip
+takeout_json/
+*.exe
+*.tsbuildinfo
+.DS_Store
