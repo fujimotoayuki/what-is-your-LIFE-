@@ -21,7 +21,11 @@ export const Step1Input: React.FC<Step1InputProps> = ({
   const [showApiKeyBox, setShowApiKeyBox] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const envKey =
+    ((import.meta.env.VITE_GEMINI_API_KEY as string | undefined) || '').trim();
   const hasCustomKey = apiKey.trim().length > 10;
+  const hasEnvKey = envKey.length > 10;
+  const isKeyActive = hasCustomKey || hasEnvKey;
 
   const addFilesToStage = (fileList: FileList | File[]) => {
     const incoming = Array.from(fileList);
@@ -164,12 +168,16 @@ export const Step1Input: React.FC<Step1InputProps> = ({
             </span>
             <span
               className={`px-2 py-0.5 rounded text-[10px] font-mono-code border ${
-                hasCustomKey
+                isKeyActive
                   ? 'bg-black text-white border-black'
                   : 'bg-neutral-100 text-neutral-500 border-neutral-200'
               }`}
             >
-              {hasCustomKey ? 'キー入力済み' : '未入力（ローカル分析対応）'}
+              {hasCustomKey
+                ? 'キー入力済み'
+                : hasEnvKey
+                ? '設定済み (.env適用中)'
+                : '未入力（ローカル分析対応）'}
             </span>
           </div>
           {showApiKeyBox ? (
