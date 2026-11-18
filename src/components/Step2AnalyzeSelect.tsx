@@ -7,6 +7,7 @@ import {
   ServiceSource,
 } from '../types/life';
 import { AnalysisCustomOptions } from '../modules/analyzer/geminiAnalyzer';
+import { PersonaVisualArt } from './PersonaVisualArt';
 
 interface Step2AnalyzeSelectProps {
   isAnalyzing: boolean;
@@ -188,6 +189,9 @@ export const Step2AnalyzeSelect: React.FC<Step2AnalyzeSelectProps> = ({
               className="w-full px-4 py-3 rounded-xl border border-black focus:outline-none text-base md:text-lg font-bold text-black"
             />
           </div>
+
+          {/* Persona Visual Illustration Card */}
+          <PersonaVisualArt profile={profile} proposal={proposal} />
 
           {/* Cross-Service & Unconscious Discoveries */}
           <div className="space-y-3">

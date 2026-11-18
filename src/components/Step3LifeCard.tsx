@@ -7,6 +7,7 @@ import {
   ServiceSource,
 } from '../types/life';
 import { downloadUnifiedJson } from '../modules/parser/takeoutParser';
+import { PersonaVisualArt } from './PersonaVisualArt';
 
 interface Step3LifeCardProps {
   profile: AggregatedProfile;
@@ -215,16 +216,26 @@ export const Step3LifeCard: React.FC<Step3LifeCardProps> = ({
 
         {/* Catchphrase */}
         <div
-          className={`py-6 border-b ${
+          className={`py-6 border-b space-y-5 ${
             inverted ? 'border-neutral-800' : 'border-neutral-200'
           }`}
         >
-          <div className="text-[10px] font-mono-code uppercase tracking-widest opacity-50 mb-1">
-            ACTION-DRIVEN IDENTITY
+          <div>
+            <div className="text-[10px] font-mono-code uppercase tracking-widest opacity-50 mb-1">
+              ACTION-DRIVEN IDENTITY
+            </div>
+            <p className="text-lg md:text-xl font-bold leading-snug">
+              {proposal.catchphrase}
+            </p>
           </div>
-          <p className="text-lg md:text-xl font-bold leading-snug">
-            {proposal.catchphrase}
-          </p>
+
+          {/* Persona Visual Archetype Illustration inside the exportable Life Card */}
+          <PersonaVisualArt
+            profile={profile}
+            proposal={proposal}
+            inverted={inverted}
+            compact
+          />
         </div>
 
         {/* Selected Discoveries with Cross-Service Breakdown Chips */}

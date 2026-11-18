@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Upload, Trash2 } from 'lucide-react';
+import { Upload, Trash2, KeyRound, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface Step1InputProps {
   apiKey: string;
@@ -10,13 +10,18 @@ interface Step1InputProps {
 }
 
 export const Step1Input: React.FC<Step1InputProps> = ({
+  apiKey,
+  onApiKeyChange,
   onSelectSample,
   onUploadFiles,
   errorMessage,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [stagedFiles, setStagedFiles] = useState<File[]>([]);
+  const [showApiKeyBox, setShowApiKeyBox] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const hasCustomKey = apiKey.trim().length > 10;
 
   const addFilesToStage = (fileList: FileList | File[]) => {
     const incoming = Array.from(fileList);
@@ -46,7 +51,7 @@ export const Step1Input: React.FC<Step1InputProps> = ({
           あなたを、あなたの人生で紹介しよう。
         </h1>
         <p className="text-xs md:text-sm text-neutral-600 leading-relaxed">
-          Google Takeout の行動履歴から、複数サービスを横断した「累計時間・検索回数・無意識の行動クセ」を集計し、人生の名刺を生成します。データはブラウザ内でのみ処理されます。
+          Google Takeout の行動履歴から、複数サービスを横断した「累計時間・検索回数・無意識の行動クセ」を集計し、イメージイラスト付きの人生の名刺を生成します。データはブラウザ内でのみ処理されます。
         </p>
       </div>
 
@@ -141,6 +146,62 @@ export const Step1Input: React.FC<Step1InputProps> = ({
             >
               選択したファイルを解析する
             </button>
+          </div>
+        )}
+      </div>
+
+      {/* Collapsible Gemini API Key Box (Optional) */}
+      <div className="border border-neutral-200 rounded-xl overflow-hidden bg-white">
+        <button
+          type="button"
+          onClick={() => setShowApiKeyBox((prev) => !prev)}
+          className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-neutral-50 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-2.5 text-xs">
+            <KeyRound className="w-4 h-4 text-neutral-500" />
+            <span className="font-bold text-black">
+              Gemini APIキー設定（任意・自分のキーでAI分析したい場合）
+            </span>
+            <span
+              className={`px-2 py-0.5 rounded text-[10px] font-mono-code border ${
+                hasCustomKey
+                  ? 'bg-black text-white border-black'
+                  : 'bg-neutral-100 text-neutral-500 border-neutral-200'
+              }`}
+            >
+              {hasCustomKey ? 'キー入力済み' : '未入力（ローカル分析対応）'}
+            </span>
+          </div>
+          {showApiKeyBox ? (
+            <ChevronUp className="w-4 h-4 text-neutral-400" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-neutral-400" />
+          )}
+        </button>
+
+        {showApiKeyBox && (
+          <div className="px-4 pb-4 pt-2 border-t border-neutral-200 space-y-2.5 bg-neutral-50">
+            <p className="text-[11px] text-neutral-600 leading-relaxed">
+              Google AI Studio で取得した Gemini API キーを入力すると、AIモデル（Gemini 3.6 / 3.5 Flash等）による高精度なパーソナリティ分析が実行されます。空欄のままでも内蔵のローカル分析エンジンで動作します。キーはお使いのブラウザ（localStorage）にのみ保存されます。
+            </p>
+            <div className="flex items-center gap-2">
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => onApiKeyChange(e.target.value)}
+                placeholder="AIza... または AQ... から始まるAPIキーを入力"
+                className="flex-1 px-3 py-2 rounded-lg border border-neutral-300 bg-white text-xs font-mono-code text-black focus:outline-none focus:border-black"
+              />
+              {apiKey && (
+                <button
+                  type="button"
+                  onClick={() => onApiKeyChange('')}
+                  className="px-3 py-2 rounded-lg border border-neutral-300 bg-white text-xs text-neutral-600 hover:text-black cursor-pointer"
+                >
+                  クリア
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
