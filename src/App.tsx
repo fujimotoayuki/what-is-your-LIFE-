@@ -161,7 +161,7 @@ export const App: React.FC = () => {
       proposal &&
       proposal.discoveries.length > 0 &&
       (!profile.aiRawDigest?.timeOfDayBreakdown ||
-        proposal.discoveries[0].categoryTag.startsWith('1.'))
+        proposal.discoveries[0].id !== 'disc-soft-1')
     ) {
       const freshProfile = aggregateEvents(
         normalizedEvents,
