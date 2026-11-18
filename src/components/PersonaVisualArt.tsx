@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { RefreshCw, Sparkles } from 'lucide-react';
 import { AggregatedProfile, LifeCardProposal } from '../types/life';
 
 interface PersonaVisualArtProps {
@@ -8,239 +9,179 @@ interface PersonaVisualArtProps {
   compact?: boolean;
 }
 
-interface BrainBlock {
-  title: string;
-  sub: string;
-  stat: string;
-  weight: number; // relative visual size
-}
-
-function buildBrainBlocks(
+function buildShadowScenePrompt(
   profile: AggregatedProfile,
   proposal: LifeCardProposal
-): BrainBlock[] {
+): string {
   const d = profile.aiRawDigest;
-  const shodoCount =
-    d?.googleSearchPatternCounts?.['書道・書法・千字文・日展・漢詩関連'] || 0;
-  const financeCount =
-    d?.googleSearchPatternCounts?.['株価・投資・銘柄・金融関連'] || 0;
-  const sofiNb = d?.notebooks?.find((n) => /sofi/i.test(n.title));
+  const topQueries = (d?.googleSearchTopQueries || [])
+    .slice(0, 5)
+    .map((q) => q.query)
+    .join(', ');
+  const topChs = (d?.youtubeTopChannels || [])
+    .slice(0, 3)
+    .map((c) => c.name)
+    .join(', ');
+  const topNbs = (d?.notebooks || [])
+    .slice(0, 2)
+    .map((n) => n.title)
+    .join(', ');
 
-  if (shodoCount > 0 && (financeCount > 0 || sofiNb)) {
-    const amekozuCnt =
-      profile.topChannels.find((c) => /雨来ズ/.test(c.name))?.count || 1062;
-    const aespaCnt =
-      profile.topChannels.find((c) => /aespa/i.test(c.name))?.count || 163;
-    return [
-      {
-        title: 'エンタメ視聴 × 人気が生まれる仕組みの解剖',
-        sub: '雨来ズ。・aespa・せじゅ / 推される理由 / ショート動画冒頭フック研究',
-        stat: `雨来ズ。${amekozuCnt}件・aespa ${aespaCnt}件・動画資料9件`,
-        weight: 30,
-      },
-      {
-        title: '投資・株価 × 値動きの理由と市場アルゴリズム',
-        sub: 'ビットコイン・メタプラ・テスラ / 機関投資家の空売り・うねり取り / SoFi分析',
-        stat: `投資検索 ${financeCount}件・SoFi資料 ${sofiNb?.sourceCount || 49}件`,
-        weight: 26,
-      },
-      {
-        title: '書道（古典テキストから現代書家・公募展まで）',
-        sub: '千字文(隷書)・陶淵明『雑詩』・書法字典 / 日展・読売書法展・高木聖雨・武田双雲',
-        stat: `書道・古典検索 ${shodoCount}件（11/16に13回連続検索）`,
-        weight: 22,
-      },
-      {
-        title: 'AI壁打ち・根拠検証 × 大規模構想の設計図化',
-        sub: '「ソースがないと信頼しない」 / 都市縮退・思考放棄の分析 / 人生データ3要素設計',
-        stat: `Gemini ${d?.overview?.geminiPromptCount || 407}件・NotebookLM ${
-          d?.overview?.notebookLmCount || 10
-        }冊`,
-        weight: 22,
-      },
-    ];
-  }
-
-  // Dynamic blocks from proposal discoveries for any other dataset
-  return proposal.discoveries.slice(0, 4).map((disc, idx) => ({
-    title: disc.headline.replace(/^\d+\.\s*/, ''),
-    sub: disc.factStatement.split('。')[0] + '。',
-    stat: disc.metricLabel,
-    weight: idx === 0 ? 32 : idx === 1 ? 26 : 21,
-  }));
+  return `Cinematic ultra-detailed anime-style digital illustration of a mysterious gender-neutral featureless dark shadow silhouette figure wearing a hoodie and headphones around the neck, sitting in a contemplative pose with hand on chin at a wooden study desk with a laptop, open notebook, coffee mug, and hourglass. Surrounding the shadow figure in the room are glowing floating holographic screens and items representing their mind: ${topQueries}, ${topChs}, ${topNbs}, a glowing circular 24-hour life-cycle clock ring above their head, and a stack of hardcover books on the desk. Warm cinematic lighting with glowing light trails swirling around the figure, masterpiece quality.`;
 }
 
 export const PersonaVisualArt: React.FC<PersonaVisualArtProps> = ({
   profile,
   proposal,
   inverted = false,
+  compact = false,
 }) => {
-  const blocks = buildBrainBlocks(profile, proposal);
-  const maxHourVal = Math.max(...profile.hourlyDistribution, 1);
+  const [customAiImageUrl, setCustomAiImageUrl] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const rankedHours = profile.hourlyDistribution
-    .map((count, hour) => ({ hour, count }))
-    .sort((a, b) => b.count - a.count);
-  const top3Hours = rankedHours.slice(0, 3).map((h) => `${h.hour}時台`);
+  const d = profile.aiRawDigest;
+  const shodoCount =
+    d?.googleSearchPatternCounts?.['書道・書法・千字文・日展・漢詩関連'] || 0;
+  const financeCount =
+    d?.googleSearchPatternCounts?.['株価・投資・銘柄・金融関連'] || 0;
+  const sofiNb = d?.notebooks?.find((n) => /sofi/i.test(n.title));
+  const isUserDataset = shodoCount > 0 && (financeCount > 0 || Boolean(sofiNb));
+
+  const titleMatch = proposal.catchphrase.match(/「([^」]+)」/);
+  const personaTitle = titleMatch
+    ? titleMatch[1]
+    : proposal.catchphrase.slice(0, 20);
+
+  const handleGenerateNewScene = async () => {
+    setIsGenerating(true);
+    try {
+      const prompt = buildShadowScenePrompt(profile, proposal);
+      const seed = Math.floor(Math.random() * 999999);
+      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(
+        prompt
+      )}?width=768&height=960&nologo=true&model=flux&seed=${seed}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to generate');
+      const blob = await res.blob();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(String(reader.result));
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      setCustomAiImageUrl(dataUrl);
+    } catch {
+      // Keep default shadow scene
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const displaySrc = customAiImageUrl || '/persona-shadow-scene.jpg';
+
+  const leftKeywords = isUserDataset
+    ? ['書道・古典墨蹟', '雨来ズ。・aespa', 'ショート動画フック']
+    : (d?.googleSearchTopQueries || []).slice(0, 3).map((q) => q.query);
+
+  const rightKeywords = isUserDataset
+    ? ['株価・SoFi・市場構造', 'AI壁打ち・根拠検証', '都市・思考構造ノート']
+    : (d?.youtubeTopChannels || []).slice(0, 3).map((c) => c.name);
 
   return (
     <div
-      className={`rounded-2xl border p-6 space-y-6 ${
+      className={`rounded-2xl border overflow-hidden ${
         inverted
           ? 'bg-neutral-950 border-neutral-800 text-white'
-          : 'bg-neutral-50 border-black text-black'
+          : 'bg-white border-black text-black'
       }`}
     >
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b pb-3 border-neutral-500/20">
-        <div>
-          <div className="text-[10px] font-mono-code uppercase tracking-widest opacity-50">
-            VISUAL BRAIN &amp; 24H RHYTHM MAP
-          </div>
-          <h3 className="text-sm md:text-base font-bold">
-            一目でわかる「頭の中の構成比率」と「24時間の行動波形」
-          </h3>
+      {/* Top Bar */}
+      <div
+        className={`px-5 py-3.5 border-b flex flex-wrap items-center justify-between gap-2 ${
+          inverted ? 'border-neutral-800' : 'border-neutral-200'
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4" />
+          <span className="text-xs md:text-sm font-bold">
+            行動履歴から生成した「あなたの脳内・世界観イメージ図」
+          </span>
         </div>
-        <div className="text-[11px] font-mono-code opacity-70">
-          全 {profile.totalEvents.toLocaleString()} 件の記録から可視化
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
-        {/* Left: Brain Share Map (What occupies this person's mind) */}
-        <div className="md:col-span-7 flex flex-col justify-between space-y-2.5">
-          <div className="text-[11px] font-bold opacity-75">
-            ■ 脳内を占める4大テーマと掘り下げ方
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 flex-1">
-            {blocks.map((b, i) => (
-              <div
-                key={i}
-                className={`p-3.5 rounded-xl border flex flex-col justify-between gap-2 ${
-                  i === 0
-                    ? inverted
-                      ? 'bg-white text-black border-white sm:col-span-2'
-                      : 'bg-black text-white border-black sm:col-span-2'
-                    : inverted
-                    ? 'bg-neutral-900 border-neutral-700 text-white'
-                    : 'bg-white border-black text-black'
-                }`}
+        {!compact && (
+          <div className="flex items-center gap-2">
+            {customAiImageUrl && (
+              <button
+                type="button"
+                onClick={() => setCustomAiImageUrl(null)}
+                className="px-2.5 py-1 rounded border border-neutral-300 text-[11px] text-neutral-600 hover:text-black cursor-pointer"
               >
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-mono-code opacity-70">
-                      CORE #{i + 1} ({b.weight}%)
-                    </span>
-                    <span className="text-[10px] font-mono-code font-bold px-1.5 py-0.5 rounded border border-current/30">
-                      {b.stat}
-                    </span>
-                  </div>
-                  <div className="text-xs md:text-sm font-bold leading-snug">
-                    {b.title}
-                  </div>
-                  <div className="text-[11px] opacity-80 leading-relaxed">
-                    {b.sub}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Right: 24-Hour Activity Bar Chart & Unconscious Habit Gauges */}
-        <div className="md:col-span-5 flex flex-col justify-between space-y-4">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="font-bold opacity-75">
-                ■ 24時間の活動リズム波形
-              </span>
-              <span className="font-mono-code opacity-70">
-                ピーク: {top3Hours.join(' / ')}
-              </span>
-            </div>
-
-            <div
-              className={`p-4 rounded-xl border space-y-2 ${
-                inverted
-                  ? 'bg-neutral-900 border-neutral-800'
-                  : 'bg-white border-neutral-300'
+                標準イラストに戻す
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleGenerateNewScene}
+              disabled={isGenerating}
+              className={`px-3 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 ${
+                inverted ? 'bg-white text-black' : 'bg-black text-white'
               }`}
             >
-              <div className="h-28 flex items-end gap-1 pt-2">
-                {profile.hourlyDistribution.map((cnt, hr) => {
-                  const pct = Math.max(Math.round((cnt / maxHourVal) * 100), 4);
-                  const isTop =
-                    hr === rankedHours[0]?.hour ||
-                    hr === rankedHours[1]?.hour ||
-                    hr === rankedHours[2]?.hour;
-                  return (
-                    <div
-                      key={hr}
-                      className="flex-1 h-full flex flex-col justify-end items-center gap-1"
-                      title={`${hr}時台: ${cnt}件`}
-                    >
-                      <div
-                        className={`w-full rounded-t transition-all ${
-                          isTop
-                            ? inverted
-                              ? 'bg-white'
-                              : 'bg-black'
-                            : inverted
-                            ? 'bg-neutral-700'
-                            : 'bg-neutral-300'
-                        }`}
-                        style={{ height: `${pct}%` }}
-                      />
-                    </div>
-                  );
-                })}
+              <RefreshCw
+                className={`w-3 h-3 ${isGenerating ? 'animate-spin' : ''}`}
+              />
+              {isGenerating
+                ? 'AIで別シーンを描画中...'
+                : 'AIで別パターンの影の人を生成'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Main Shadow Persona Illustration Container */}
+      <div className="relative w-full bg-neutral-900 overflow-hidden">
+        <img
+          src={displaySrc}
+          alt={personaTitle}
+          className={`w-full ${
+            compact ? 'max-h-[540px]' : 'max-h-[680px]'
+          } object-cover object-center mx-auto block`}
+        />
+
+        {/* Subtle Bottom Vignette & Glowing Stance Formula Overlay */}
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent pt-16 pb-5 px-6 flex flex-col items-center text-center text-white select-none">
+          <div className="flex items-center gap-4 md:gap-6 text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
+            <div className="text-right">
+              <div className="text-base md:text-2xl font-serif font-bold tracking-wider">
+                発想・妄想
               </div>
-              <div className="flex justify-between text-[9px] font-mono-code opacity-50 pt-1 border-t border-neutral-500/20">
-                <span>0時</span>
-                <span>6時</span>
-                <span>12時</span>
-                <span>18時</span>
-                <span>23時</span>
+              <div className="text-[10px] md:text-xs opacity-80 font-mono-code">
+                (Imagining Big)
+              </div>
+            </div>
+
+            <div className="text-xl md:text-3xl font-light opacity-80">×</div>
+
+            <div className="text-left">
+              <div className="text-base md:text-2xl font-serif font-bold tracking-wider">
+                検証・構造化
+              </div>
+              <div className="text-[10px] md:text-xs opacity-80 font-mono-code">
+                (Evidence &amp; Structure)
               </div>
             </div>
           </div>
 
-          {/* 3 Key Unconscious Numbers */}
-          <div
-            className={`p-4 rounded-xl border space-y-2.5 text-xs ${
-              inverted
-                ? 'bg-neutral-900 border-neutral-800'
-                : 'bg-white border-neutral-300'
-            }`}
-          >
-            <div className="text-[11px] font-bold opacity-75">
-              ■ 無意識の行動データ
-            </div>
-            <div className="flex items-center justify-between border-b pb-1.5 border-neutral-500/15">
-              <span className="opacity-75">開始15秒以内の即スキップ</span>
-              <span className="font-mono-code font-bold">
-                {profile.unconsciousStats?.rapidSkip15sCount.toLocaleString() ||
-                  0}{' '}
-                回 ({profile.unconsciousStats?.rapidSkipRatioPct || 0}%)
+          {/* Floating Theme Pills at Bottom of Poster */}
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
+            {[...leftKeywords, ...rightKeywords].slice(0, 6).map((kw, i) => (
+              <span
+                key={i}
+                className="px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/30 text-[10px] md:text-[11px] text-white font-medium"
+              >
+                {kw}
               </span>
-            </div>
-            <div className="flex items-center justify-between border-b pb-1.5 border-neutral-500/15">
-              <span className="opacity-75">YouTube累計視聴時間</span>
-              <span className="font-mono-code font-bold">
-                {profile.unconsciousStats?.totalWatchHours.toLocaleString() || 0}{' '}
-                時間 (丸{profile.unconsciousStats?.totalDaysEquivalent || 0}日分)
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="opacity-75">視聴したチャンネルの種類</span>
-              <span className="font-mono-code font-bold">
-                {(
-                  profile.aiRawDigest?.overview?.uniqueYoutubeChannels ||
-                  profile.topChannels.length
-                ).toLocaleString()}{' '}
-                チャンネル
-              </span>
-            </div>
+            ))}
           </div>
         </div>
       </div>
