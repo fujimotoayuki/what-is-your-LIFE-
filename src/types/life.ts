@@ -132,12 +132,10 @@ export interface AiRawDigest {
     sourceCount: number;
     sampleSources: string[];
   }[];
-  geminiPatternCounts: Record<string, number>;
   geminiPromptsChronological: {
     date: string;
     prompt: string;
   }[];
-  googleSearchPatternCounts: Record<string, number>;
   googleSearchTopQueries: { query: string; count: number }[];
   googleSearchDailyBursts: {
     date: string;
@@ -206,12 +204,6 @@ export interface AggregatedProfile {
   >;
 }
 
-export interface EraChapter {
-  periodLabel: string;
-  themeTitle: string;
-  summary: string;
-}
-
 export interface ServiceBreakdownChip {
   service: string;
   stat: string;
@@ -225,21 +217,16 @@ export interface DiscoveryItem {
   categoryTag: string;
   serviceBreakdown?: ServiceBreakdownChip[];
   evidenceIds: string[];
-  enabled?: boolean;
 }
 
 export interface LifeCardProposal {
+  /** 二つ名 (e.g. 深夜の実験台) */
+  nickname: string;
+  /** One soft sentence describing the person */
   catchphrase: string;
-  visualImagePrompt?: string;
-  eraChapters: EraChapter[];
   discoveries: DiscoveryItem[];
-  analysisSource?: 'gemini-api' | 'local-fallback';
-  lastSystemPrompt?: string;
-  validationReport?: {
-    totalGenerated: number;
-    verifiedCount: number;
-    droppedCount: number;
-  };
+  /** Gemini model that produced this analysis */
+  analysisModel: string;
 }
 
 export type CardTheme = 'midnight-endroll' | 'bereal-pop' | 'minimal-card';

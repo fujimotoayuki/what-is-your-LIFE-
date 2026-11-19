@@ -2,8 +2,14 @@ node_modules/
 dist/
 .env
 .env.*
+*.key
+.claude/
 takeout-*.zip
 takeout_json/
 *.exe
 *.tsbuildinfo
 .DS_Store
+video/out/
+video/assets/
+video/TODO_for_you.md
+video/form_draft.md

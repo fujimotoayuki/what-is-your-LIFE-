@@ -687,6 +687,45 @@ export async function parseUploadedTakeoutFiles(
   };
 }
 
+export interface SampleDatasetInfo {
+  id: 'sauna-spice' | 'coffee-architect' | 'indiegame-dtm';
+  label: string;
+  description: string;
+}
+
+export const SAMPLE_DATASETS: SampleDatasetInfo[] = [
+  {
+    id: 'sauna-spice',
+    label: 'サウナ×スパイス×自作キーボード',
+    description: '深夜型・44件の小さなデータ',
+  },
+  {
+    id: 'coffee-architect',
+    label: '古民家再生×コーヒー',
+    description: '建築・DIY系・約1,500件',
+  },
+  {
+    id: 'indiegame-dtm',
+    label: 'インディーゲーム×DTM',
+    description: 'ゲーム開発・作曲系・約1,200件',
+  },
+];
+
+/** Load one of the bundled sample datasets (zips are served from /samples/). */
+export async function loadSampleDatasetById(
+  id: SampleDatasetInfo['id'],
+  onProgress?: (msg: string) => void
+): Promise<{ normalizedEvents: NormalizedEvent[]; aggregatedProfile: AggregatedProfile }> {
+  if (id === 'sauna-spice') return loadSampleLifeDataset();
+  const res = await fetch(`/samples/${id}.zip`);
+  if (!res.ok) throw new Error(`サンプルデータ（${id}）の読み込みに失敗しました`);
+  const file = new File([await res.blob()], `sample-${id}.zip`);
+  const out = await parseUploadedTakeoutFiles([file], onProgress);
+  const info = SAMPLE_DATASETS.find((d) => d.id === id);
+  out.aggregatedProfile.datasetLabel = `サンプルデータ（${info?.label || id}）`;
+  return out;
+}
+
 export function loadSampleLifeDataset(): {
   normalizedEvents: NormalizedEvent[];
   aggregatedProfile: AggregatedProfile;
@@ -711,25 +750,4 @@ export function loadSampleLifeDataset(): {
     normalizedEvents: safeEvents,
     aggregatedProfile,
   };
-}
-
-export function downloadUnifiedJson(
-  normalizedEvents: NormalizedEvent[],
-  aggregatedProfile: AggregatedProfile
-) {
-  const payload: UnifiedTakeoutExport = {
-    version: '1.0',
-    exportedAt: new Date().toISOString(),
-    normalizedEvents,
-    aggregatedProfile,
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], {
-    type: 'application/json',
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `life-card-data-${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
 }

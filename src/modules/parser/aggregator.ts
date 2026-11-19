@@ -102,145 +102,8 @@ interface SemanticGenreRule {
   terms: { label: string; pattern: RegExp }[];
 }
 
-const SEMANTIC_GENRE_RULES: SemanticGenreRule[] = [
-  {
-    id: 'genre-oshikatsu-aespa',
-    genre: 'oshikatsu',
-    defaultTitle: 'aespa（エスパ）',
-    terms: [
-      { label: 'aespa', pattern: /aespa|エスパ/i },
-      { label: 'ウィンター', pattern: /ウィンター|winter.*aespa|aespa.*winter/i },
-      { label: 'カリナ', pattern: /カリナ|karina.*aespa|aespa.*karina/i },
-      { label: 'ニンニン', pattern: /ニンニン|ningning/i },
-      { label: 'ジゼル', pattern: /ジゼル|giselle/i },
-    ],
-  },
-  {
-    id: 'genre-money-investment',
-    genre: 'money',
-    defaultTitle: '株価・投資・仮想通貨',
-    terms: [
-      { label: '株価', pattern: /株価|日経平均|ダウ/ },
-      {
-        label: 'ビットコイン',
-        pattern: /ビットコイン|bitcoin|\bbtc\b|仮想通貨|暗号資産/i,
-      },
-      { label: 'メタプラネット', pattern: /メタプラ/ },
-      { label: 'SoFi', pattern: /\bsofi\b|ソーファイ/i },
-      {
-        label: 'テスラ・米国株',
-        pattern: /テスラ|\btsla\b|エヌビディア|nvidia|米国株|S&P500/i,
-      },
-      {
-        label: '決算・ETF・NISA',
-        pattern: /決算|\betf\b|\bnisa\b|新NISA|株式投資|配当|証券/i,
-      },
-    ],
-  },
-  {
-    id: 'genre-hobby-shodo',
-    genre: 'hobby_culture',
-    defaultTitle: '書道・古典・書法展',
-    terms: [
-      { label: '千字文・隷書', pattern: /千字文|隷書|楷書|行書|草書|篆書|竹冠/ },
-      { label: '日展・読売書法展', pattern: /日展|読売書法展|書魁|毎日書道|謙慎/ },
-      { label: '書道・揮毫', pattern: /書道|習字|揮毫|条幅|臨書/ },
-      { label: '書法字典', pattern: /書法字典|字典/ },
-      { label: '漢詩・陶淵明', pattern: /漢詩|陶淵明|雑詩|高木聖雨|原田幹久/ },
-    ],
-  },
-  {
-    id: 'genre-maps-local-niigata',
-    genre: 'maps_outing',
-    defaultTitle: '新潟・上越エリア拠点',
-    terms: [
-      {
-        label: '上越・高田・本町',
-        pattern: /上越|高田小町|高田駅|高田城|本町web|ミュゼ雪小町/,
-      },
-      { label: '新潟・万代', pattern: /万代シテイ|新潟市|新潟県|新潟駅|ビッグスワン/ },
-      { label: '朱鷺メッセ・長岡', pattern: /朱鷺メッセ|リバーサイド千秋/ },
-    ],
-  },
-  {
-    id: 'genre-maps-gourmet-wellness',
-    genre: 'maps_outing',
-    defaultTitle: '麻辣湯・ラーメン・サウナ・癒やし',
-    terms: [
-      {
-        label: '麻辣湯（楊国福・七宝）',
-        pattern: /麻辣湯|マーラータン|マーラーたん|楊国福|七宝麻辣湯/,
-      },
-      { label: 'ラーメン', pattern: /ラーメン|らーめん|中華そば/ },
-      {
-        label: 'サウナ・ヘッドスパ',
-        pattern: /サウナ|萩の湯|ヘッドスパ|Adonis|アドニス/i,
-      },
-      { label: 'エニタイム・ジム', pattern: /エニタイムフィットネス|エニタイム/ },
-      {
-        label: 'カフェ・スポット',
-        pattern: /カフェ|東京ドーム|六本木ヒルズ|コスモワールド|マリンタワー|AIR CABIN/,
-      },
-    ],
-  },
-  {
-    id: 'genre-ai-tech-career',
-    genre: 'ai_tech_career',
-    defaultTitle: 'AI開発・IT資格・キャリア研究',
-    terms: [
-      {
-        label: 'AI開発・Claude・Gemini',
-        pattern: /\bclaude\b|antigravity|cline|cursor|ジェミニ|\bgemini\b|生成ai|llm/i,
-      },
-      {
-        label: 'プログラミング・Web開発',
-        pattern: /react|typescript|javascript|python|プログラミング|アプリ開発|github|api/i,
-      },
-      {
-        label: '企業研究・新卒就活',
-        pattern: /新卒|就活|インターン|ガクチカ|テラスカイ|ソニーフィナンシャル/,
-      },
-      {
-        label: '情報処理・安全確保支援士',
-        pattern: /安全確保支援士|情報処理|基本情報|応用情報|統計|回帰分析/,
-      },
-    ],
-  },
-  {
-    id: 'genre-yt-amekozu',
-    genre: 'youtube_creator',
-    defaultTitle: '雨来ズ。',
-    terms: [{ label: '雨来ズ。', pattern: /雨来ズ|雨来ず|雨ニモマケズ/ }],
-  },
-  {
-    id: 'genre-yt-seju',
-    genre: 'youtube_creator',
-    defaultTitle: 'seju・超十代',
-    terms: [
-      {
-        label: 'seju・超十代',
-        pattern: /せじゅ|\bseju\b|超十代|実熊瑠琉|本望あやか|平松その|増田彩乃|櫻井優衣/i,
-      },
-    ],
-  },
-  {
-    id: 'genre-yt-hiroaka',
-    genre: 'youtube_creator',
-    defaultTitle: 'ヒロアカ（白金レオ）',
-    terms: [
-      {
-        label: 'ヒロアカ・白金レオ',
-        pattern: /ヒロアカ|僕のヒーローアカデミア|白金レオ|死柄木|荼毘/,
-      },
-    ],
-  },
-  {
-    id: 'genre-yt-tabletennis',
-    genre: 'youtube_creator',
-    defaultTitle: '卓球（卓キチ）',
-    terms: [{ label: '卓球・卓キチ', pattern: /卓球|卓キチ|吉村真晴/ }],
-  },
-];
+// Topics are discovered dynamically from the data; no person-specific rules.
+const SEMANTIC_GENRE_RULES: SemanticGenreRule[] = [];
 
 function isGarbageKeyword(raw: string): boolean {
   const lower = raw.trim().toLowerCase();
@@ -678,14 +541,7 @@ export function aggregateEvents(
       let displayKeyword = item.defaultTitle;
       if (item.isSemanticRule && matchedSubKeywords.length > 0) {
         const topSubNames = matchedSubKeywords.slice(0, 3).map((s) => s.word);
-        if (item.id === 'genre-oshikatsu-aespa') {
-          displayKeyword =
-            topSubNames.length > 1
-              ? `aespa（${topSubNames.filter((w) => w !== 'aespa').slice(0, 3).join('・') || 'エスパ'}）`
-              : 'aespa';
-        } else {
-          displayKeyword = topSubNames.join('・');
-        }
+        displayKeyword = topSubNames.join('・');
       }
 
       // Score gives high weight to non-YouTube services (Google Search, Maps, Gemini, NotebookLM) and multi-service overlap
@@ -924,66 +780,10 @@ export function aggregateEvents(
     mapsFreq.set(p, (mapsFreq.get(p) ?? 0) + 1);
   }
 
-  const geminiPatternCounts: Record<string, number> = {
-    '根拠・出典・論文の確認(ソース/出典/根拠/論文/研究)': geminiEvents.filter((e) =>
-      /ソース|出典|根拠|論文|研究|エビデンス|信頼/.test(e.title)
-    ).length,
-    '理由・仕組み・真偽の深掘り(なんで/なぜ/本当/事実/仕組み/構造)':
-      geminiEvents.filter((e) => /なんで|なぜ|本当|事実|仕組み|構造/.test(e.title))
-        .length,
-    '投資・市場・アルゴリズムの質問(株/投資/銘柄/機関投資家/アルゴリズム/空売り/オプション/うねり)':
-      geminiEvents.filter((e) =>
-        /株|投資|銘柄|機関|アルゴリズム|空売り|オプション|うねり|ポートフォリオ|ファンダメンタル/.test(
-          e.title
-        )
-      ).length,
-    '企画・設計書・UI・配色の指定(アプリ/UI/設計書/仕様書/企画書/スライド/配色/#)':
-      geminiEvents.filter((e) =>
-        /アプリ|UI|設計書|仕様書|企画書|スライド|配色|#[0-9A-Fa-f]{6}|見切れ/.test(
-          e.title
-        )
-      ).length,
-    '人の心理・エンタメ・推される理由の考察(アイドル/推/ショート動画/心理/顧客)':
-      geminiEvents.filter((e) =>
-        /アイドル|推|ショート|心理|顧客|ジャーニー|人気/.test(e.title)
-      ).length,
-  };
-
-  const googleSearchPatternCounts: Record<string, number> = {
-    '株価・投資・銘柄・金融関連': gSearchEvents.filter((e) =>
-      /株価|投資|銘柄|ビットコイン|\bbtc\b|メタプラ|テスラ|\bsofi\b|証券|\betf\b|\bnisa\b|決算|per|空売り/i.test(
-        e.title
-      )
-    ).length,
-    '書道・書法・千字文・日展・漢詩関連': gSearchEvents.filter((e) =>
-      /書道|書法|千字文|日展|読売書法|書魁|隷書|楷書|行書|草書|篆書|陶淵明|漢詩|雑詩|高木聖雨|武田双雲|原田幹久|書遊|2尺|異体字|竹冠/.test(
-        e.title
-      )
-    ).length,
-    'aespa・メンバー関連': gSearchEvents.filter((e) =>
-      /aespa|エスパ|ウィンター|カリナ|ニンニン|ジゼル/i.test(e.title)
-    ).length,
-    '雨来ズ関連': gSearchEvents.filter((e) => /雨来ズ|雨来ず/.test(e.title)).length,
-  };
-
   // Select up to 180 most informative Gemini prompts (prioritizing longer/substantive ones + recent ones)
   const substantiveGeminiPrompts = [...geminiEvents]
     .filter((e) => e.title.trim().length >= 8)
-    .sort((a, b) => {
-      const aScore =
-        (/ソース|信頼|機関|アルゴリズム|アイドル|推|#[0-9A-Fa-f]{6}|見切れ|設計書|企画書|エンドロール|うねり/.test(
-          a.title
-        )
-          ? 500
-          : 0) + Math.min(a.title.length, 200);
-      const bScore =
-        (/ソース|信頼|機関|アルゴリズム|アイドル|推|#[0-9A-Fa-f]{6}|見切れ|設計書|企画書|エンドロール|うねり/.test(
-          b.title
-        )
-          ? 500
-          : 0) + Math.min(b.title.length, 200);
-      return bScore - aScore;
-    })
+    .sort((a, b) => Math.min(b.title.length, 200) - Math.min(a.title.length, 200))
     .slice(0, 160)
     .sort(
       (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
@@ -1222,9 +1022,7 @@ export function aggregateEvents(
       mapsCount: mapsEvents.length,
     },
     notebooks: notebooksDigest,
-    geminiPatternCounts,
     geminiPromptsChronological: substantiveGeminiPrompts,
-    googleSearchPatternCounts,
     googleSearchTopQueries: Array.from(gSearchFreq.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 60)

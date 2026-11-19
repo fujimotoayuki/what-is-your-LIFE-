@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;500;700;900&family=Noto+Serif+JP:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; color: #fff;
+    font-family: 'Noto Sans JP', 'Yu Gothic', sans-serif; }
+  .scene { position: absolute; inset: 0; display: none; }
+  .scene.on { display: block; }
+  .abs { position: absolute; }
+  .center { left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; white-space: nowrap; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .serif { font-family: 'Noto Serif JP', serif; }
+
+  /* endroll */
+  #roll { left: 0; right: 0; text-align: center; }
+  .credit { height: 150px; display: flex; flex-direction: column; justify-content: center; }
+  .credit .k { font-size: 28px; color: #9a9a9a; letter-spacing: .3em; }
+  .credit .v { font-size: 52px; font-weight: 700; letter-spacing: .1em; margin-top: 8px; }
+
+  /* google records */
+  .rec { font-size: 30px; white-space: nowrap; padding: 14px 26px; border-radius: 14px;
+    background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.18); }
+  .rec { display: flex; align-items: center; gap: 16px; }
+  .rec svg { width: 44px; height: 44px; flex: none; }
+  .step { width: 440px; height: 300px; border-radius: 28px; background: rgba(255,255,255,.07); border: 2px solid rgba(255,255,255,.2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; }
+  .step .n { font-size: 26px; color: #8ab4f8; font-weight: 700; letter-spacing: .2em; }
+  .step .h { font-size: 40px; font-weight: 900; }
+  .step .d { font-size: 24px; color: #bbb; }
+  .arrow { font-size: 64px; color: #8ab4f8; }
+  .chip { font-size: 44px; font-weight: 900; padding: 16px 34px; border-radius: 999px; white-space: nowrap; }
+  .bub { font-size: 34px; font-weight: 700; background: #fff; color: #111; padding: 16px 28px; border-radius: 30px; white-space: nowrap; }
+
+  /* license card */
+  .lic { width: 760px; height: 480px; border-radius: 28px; color: #13241b; padding: 30px 34px;
+    background: linear-gradient(135deg, #f3f8f1 0%, #e3efe6 45%, #dce9f2 100%);
+    box-shadow: 0 30px 80px rgba(0,0,0,.5); }
+  .lic .ttl { font-size: 34px; font-weight: 900; letter-spacing: .3em; border-bottom: 2px solid rgba(19,60,40,.25); padding-bottom: 10px; }
+  .lic .ttl small { font-size: 14px; letter-spacing: .2em; color: rgba(19,60,40,.6); margin-left: 14px; font-weight: 500; }
+  .lic .row { display: grid; grid-template-columns: 90px 1fr; font-size: 20px; padding: 9px 0; border-bottom: 1px solid rgba(19,60,40,.12); }
+  .lic .row span:first-child { font-size: 15px; color: rgba(19,60,40,.6); font-weight: 700; letter-spacing: .2em; }
+  .lic .photo { position: absolute; right: 34px; top: 96px; width: 210px; height: 280px; border-radius: 10px;
+    background: radial-gradient(circle at 50% 30%, #2a3f66, #0b1020 75%); overflow: hidden; }
+  .lic .types { position: absolute; left: 34px; right: 34px; bottom: 26px; display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .lic .types div { background: rgba(255,255,255,.7); border-radius: 8px; padding: 7px 10px; font-size: 14px; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- 1. Endroll (20s): 0-10 scroll, 10-20 stop & become ? -->
+<section class="scene" id="endroll">
+  <div class="abs" id="roll"></div>
+</section>
+
+<!-- 2. Google icons converge (8s) -->
+<section class="scene" id="google">
+  <div id="recs"></div>
+  <div class="abs center" id="gtitle"></div>
+</section>
+
+<!-- 4. Gemini (5s) -->
+<section class="scene" id="gemini">
+  <div id="dots"></div>
+  <div class="abs center" id="q" style="font-size:72px;font-weight:900;letter-spacing:.06em"></div>
+  <div class="abs center" id="spark"></div>
+</section>
+
+<!-- 5. App intro + Takeout steps (6s) -->
+<section class="scene" id="takeout">
+  <div class="abs" id="appname" style="left:0;right:0;top:170px;text-align:center">
+    <div style="font-size:30px;color:#aaa;letter-spacing:.3em">そこで作ったアプリ</div>
+    <div class="serif" style="font-size:96px;font-weight:700;margin-top:10px">What is your LIFE?</div>
+  </div>
+  <div class="abs" id="steps" style="left:0;right:0;top:520px;display:flex;justify-content:center;align-items:center;gap:40px"></div>
+</section>
+
+<!-- 6. Trend (10s) -->
+<section class="scene" id="trend">
+  <div id="chips"></div>
+  <div class="abs center" id="sunao" style="font-size:84px;font-weight:900;letter-spacing:.06em">見せたいのは、<span style="color:#ffd27a">“素の自分”</span>。</div>
+</section>
+
+<!-- 3. Count (12s) -->
+<section class="scene" id="count">
+  <div id="rain" class="abs" style="inset:0;opacity:.18"></div>
+  <div class="abs center">
+    <div class="mono" id="num" style="font-size:200px;font-weight:700;letter-spacing:-.02em"></div>
+    <div id="numsub" style="font-size:44px;font-weight:700;margin-top:10px;letter-spacing:.2em"></div>
+    <div id="bar" style="margin:46px auto 0;width:1100px;height:6px;background:rgba(255,255,255,.15);border-radius:3px;position:relative">
+      <div id="barfill" style="position:absolute;left:0;top:0;bottom:0;background:#fff;border-radius:3px"></div>
+      <div class="mono abs" style="left:0;top:20px;font-size:24px;color:#aaa">2022.03</div>
+      <div class="mono abs" style="right:0;top:20px;font-size:24px;color:#aaa">2026.11</div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. Share (10s) -->
+<section class="scene" id="share">
+  <div id="cards"></div>
+  <div id="bubbles"></div>
+</section>
+
+<!-- 7. Outro (10s) -->
+<section class="scene" id="outro">
+  <div id="outroCard" class="abs"></div>
+  <div id="outroRoll" class="abs" style="left:0;right:0;text-align:center"></div>
+  <div class="abs center" id="title">
+    <div class="serif" style="font-size:120px;font-weight:700;letter-spacing:.02em">What is your LIFE?</div>
+    <div style="font-size:30px;color:#aaa;margin-top:24px;letter-spacing:.3em">あなたを、あなたの人生で紹介しよう。</div>
+    <div class="mono" style="font-size:24px;color:#8ab4f8;margin-top:60px;letter-spacing:.2em">Powered by Gemini</div>
+  </div>
+</section>
+
+<script>
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const ease = (x) => { x = clamp(x); return x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3) / 2; };
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const $ = (id) => document.getElementById(id);
+
+/* ---------- scene builders ---------- */
+const CREDITS = [
+  ['一番多く話した人', '———'], ['一番夢中になったこと', '———'], ['一番よく食べたもの', '———'],
+  ['一生で稼いだお金', '———'], ['一番多く書いた文字', '———'], ['一番通った場所', '———'],
+  ['一番夢中になった時期', '———'], ['払った税金', '———'], ['一番笑った日', '———'],
+  ['一番多く調べた言葉', '———'],
+];
+function buildEndroll() {
+  $('roll').innerHTML = '<div style="height:1080px"></div>' + CREDITS.map(([k, v]) =>
+    `<div class="credit"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+}
+function renderEndroll(t) {
+  // scroll for 0-10s then ease to a stop at 10.5s
+  const stopAt = 8.5; // list ends centered on screen
+  const speed = 1290 / stopAt; // px/s
+  const y = t < stopAt ? t * speed : stopAt * speed;
+  $('roll').style.top = (-y) + 'px';
+  const q = prog(t, 13.3, 14.3);
+  document.querySelectorAll('#roll .v').forEach((el, i) => {
+    const local = clamp(q * 1.6 - i * 0.06);
+    el.textContent = local > .5 ? '？' : '———';
+    el.style.color = local > .5 ? '#fff' : '#555';
+    el.style.transform = `scale(${1 + .15 * Math.sin(local * Math.PI)})`;
+  });
+  document.body.style.opacity = 1 - prog(t, 15.4, 16);
+}
+
+const ICON = {
+  g: '<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.570-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.730 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>',
+  yt: '<svg viewBox="0 0 48 34"><rect width="48" height="34" rx="9" fill="#FF0000"/><path d="M19 9.5v15l13-7.5z" fill="#fff"/></svg>',
+  map: '<svg viewBox="0 0 48 48"><path d="M24 2C15.2 2 8 9.2 8 18c0 12 16 28 16 28s16-16 16-28C40 9.2 32.8 2 24 2z" fill="#EA4335"/><path d="M24 2C15.2 2 8 9.2 8 18c0 3 1 6.2 2.6 9.3L24 18z" fill="#4285F4"/><path d="M10.6 27.3C14.6 35 24 46 24 46V18z" fill="#34A853"/><path d="M40 18c0-8.8-7.2-16-16-16v16z" fill="#FBBC05"/><circle cx="24" cy="18" r="6" fill="#fff"/></svg>',
+  gem: '<svg viewBox="0 0 24 24"><defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f8df9"/><stop offset=".55" stop-color="#9168f0"/><stop offset="1" stop-color="#d6645d"/></linearGradient></defs><path fill="url(#gg)" d="M12 0C12 6.6 17.4 12 24 12 17.4 12 12 17.4 12 24 12 17.4 6.6 12 0 12 6.6 12 12 6.6 12 0Z"/></svg>',
+  nlm: '<svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#fff"/><path d="M10 33a14 14 0 0 1 28 0" stroke="#111" stroke-width="4.5" fill="none"/><path d="M16 33a8 8 0 0 1 16 0" stroke="#111" stroke-width="4.5" fill="none"/><circle cx="24" cy="33" r="3" fill="#111"/></svg>',
+};
+const RECS = [
+  ['g', '自作キーボード 肩こり 治る'], ['yt', '焚き火の音 8時間'], ['map', '神保町の純喫茶'],
+  ['gem', '企画書を一緒に作って'], ['nlm', '温冷交代浴と睡眠のノート'], ['g', 'スパイス 黄金比率'],
+  ['yt', 'ゲームの手触りの作り方'], ['map', '上野のスパイス専門店'], ['gem', 'この現象に名前をつけて'],
+  ['g', '古民家 断熱 DIY'], ['yt', '深夜の作業用BGM'], ['nlm', '自分のログ解析ノート'],
+  ['map', '鎌倉 古民家カフェ'], ['g', '浅煎り 抽出温度'], ['gem', '移住の段取りを考えて'], ['yt', 'サウナ ととのう 仕組み'],
+];
+const big = (svg, px) => svg.replace('<svg', `<svg width="${px}" height="${px}"`);
+function buildGoogle() {
+  $('recs').innerHTML = RECS.map((r, i) => `<div class="rec abs" id="r${i}">${ICON[r[0]]}<span>${r[1]}</span></div>`).join('');
+  $('gtitle').innerHTML = `<div id="bigG" style="width:260px;height:260px;margin:0 auto">${big(ICON.g, 260)}</div>
+    <div id="gword" style="font-size:90px;font-weight:700;margin-top:30px">
+    <span style="color:#4285F4">G</span><span style="color:#EA4335">o</span><span style="color:#FBBC05">o</span><span style="color:#4285F4">g</span><span style="color:#34A853">l</span><span style="color:#EA4335">e</span></div>`;
+}
+function renderGoogle(t) {
+  RECS.forEach((_, i) => {
+    const el = $('r' + i);
+    const ang = (i / RECS.length) * Math.PI * 2 + 0.3;
+    const start = 0.1 + i * 0.17;
+    const pIn = ease(prog(t, start, start + 0.8));
+    const pConv = ease(prog(t, 4.0, 5.1));
+    const R0 = 1400, R1 = 360 + (i % 4) * 70;
+    const R = pConv > 0 ? R1 * (1 - pConv) : R0 + (R1 - R0) * pIn;
+    el.style.left = (960 + Math.cos(ang) * R * 1.4) + 'px';
+    el.style.top = (540 + Math.sin(ang) * R * 0.85) + 'px';
+    el.style.transform = `translate(-50%,-50%) scale(${1 - .7 * pConv})`;
+    el.style.opacity = pIn * (1 - pConv);
+  });
+  const pg = prog(t, 4.9, 5.6);
+  $('bigG').style.transform = `scale(${pg <= 0 ? 0 : ease(pg) * (1 + .25 * Math.sin(pg * Math.PI))})`;
+  $('gword').style.opacity = ease(prog(t, 5.5, 6.2));
+  document.body.style.opacity = 1 - prog(t, 7.5, 8);
+}
+
+function buildGemini() {
+  let h = '';
+  for (let i = 0; i < 90; i++) h += `<div class="abs dot" data-i="${i}" style="width:10px;height:10px;border-radius:5px;background:#8ab4f8"></div>`;
+  $('dots').innerHTML = h;
+  $('q').innerHTML = '<span class="mono">40,686</span>件。どう処理する？';
+  $('spark').innerHTML = `<div id="sp" style="width:300px;height:300px;margin:0 auto">${big(ICON.gem, 300)}</div>
+    <div id="spw" style="font-size:96px;font-weight:700;margin-top:30px;background:linear-gradient(90deg,#4f8df9,#9168f0,#d6645d);-webkit-background-clip:text;color:transparent">Gemini</div>`;
+}
+function renderGemini(t) {
+  $('q').style.opacity = prog(t, 0, .4) * (1 - prog(t, 1.9, 2.3));
+  const pc = ease(prog(t, 2.0, 3.4));
+  document.querySelectorAll('.dot').forEach((el) => {
+    const i = +el.dataset.i;
+    const ang = i * 2.399 + t * 0.3, r = (300 + (i * 37) % 700) * (1 - pc);
+    el.style.left = (960 + Math.cos(ang) * r * 1.3) + 'px';
+    el.style.top = (540 + Math.sin(ang) * r * .8) + 'px';
+    el.style.opacity = (.25 + .5 * prog(t, 0, 1)) * (1 - prog(t, 3.0, 3.5));
+  });
+  const ps = prog(t, 2.6, 3.4);
+  $('sp').style.transform = `scale(${ps <= 0 ? 0 : ease(ps) * (1 + .2 * Math.sin(ps * Math.PI))}) rotate(${(1 - ease(ps)) * -90}deg)`;
+  $('spw').style.opacity = ease(prog(t, 3.1, 3.7));
+  document.body.style.opacity = 1 - prog(t, 4.6, 5);
+}
+
+function buildTakeout() {
+  const box = (n, icon, h, d, id) => `<div class="step" id="${id}"><div class="n">STEP ${n}</div>${icon}<div class="h">${h}</div><div class="d">${d}</div></div>`;
+  const zip = '<svg width="64" height="64" viewBox="0 0 48 48"><rect x="8" y="4" width="32" height="40" rx="5" fill="#fdd663"/><path d="M22 4h4v4h-4zM22 12h4v4h-4zM22 20h4v4h-4z" fill="#7a5c00"/><rect x="19" y="28" width="10" height="10" rx="2" fill="#7a5c00"/></svg>';
+  const card = '<svg width="64" height="64" viewBox="0 0 48 48"><rect x="2" y="10" width="44" height="30" rx="5" fill="#e3efe6"/><rect x="30" y="15" width="11" height="15" rx="2" fill="#0b1020"/><rect x="7" y="16" width="18" height="3" fill="#13241b"/><rect x="7" y="23" width="14" height="3" fill="#13241b" opacity=".5"/></svg>';
+  $('steps').innerHTML =
+    box(1, big(ICON.g, 64), 'Googleから書き出す', 'データ エクスポート（Takeout）', 'st0') +
+    '<div class="arrow" id="ar0">→</div>' +
+    box(2, zip, 'アプリに読み込む', '集計は自分の端末の中で', 'st1') +
+    '<div class="arrow" id="ar1">→</div>' +
+    box(3, big(ICON.gem, 64), 'Geminiが分析', 'あなたの「免許証」に', 'st2');
+}
+function renderTakeout(t) {
+  $('appname').style.opacity = ease(prog(t, 0, .5));
+  $('appname').style.transform = `translateY(${(1 - ease(prog(t, 0, .6))) * 30}px)`;
+  [0, 1, 2].forEach((i) => {
+    const p = prog(t, 2.2 + i * 0.9, 2.6 + i * 0.9);
+    const el = $('st' + i);
+    el.style.opacity = p > 0 ? 1 : 0;
+    el.style.transform = `scale(${p <= 0 ? .6 : ease(p) * (1 + .15 * Math.sin(p * Math.PI)) * .4 + .6})`;
+    if (i < 2) $('ar' + i).style.opacity = prog(t, 2.6 + i * 0.9, 2.9 + i * 0.9);
+  });
+  document.body.style.opacity = 1 - prog(t, 5.6, 6);
+}
+
+const CHIPS = [
+  ['MBTI', '#8ab4f8'], ['INFP', '#c58af9'], ['恋愛タイプ診断', '#f28b82'], ['BeReal', '#ffffff'],
+  ['セットログ', '#fdd663'], ['#自己紹介カード', '#81c995'], ['ENTJ', '#8ab4f8'], ['推し診断', '#f28b82'],
+  ['今日の素の私', '#fdd663'], ['性格診断', '#c58af9'], ['ルーティン動画', '#81c995'], ['タイプ別あるある', '#ffffff'],
+];
+const CHIP_POS = [[420,230],[1500,190],[960,140],[300,560],[1620,520],[700,880],[1250,900],[1220,390],[660,410],[1580,820],[300,860],[960,670]];
+function buildTrend() {
+  $('chips').innerHTML = CHIPS.map(([w, c], i) =>
+    `<div class="chip abs" id="ch${i}" style="color:${c};border:3px solid ${c}">${w}</div>`).join('');
+}
+function renderTrend(t) {
+  CHIPS.forEach((_, i) => {
+    const el = $('ch' + i);
+    const p = prog(t, 0.15 + i * 0.4, 0.55 + i * 0.4);
+    const sc = p <= 0 ? 0 : ease(p) * (1 + .35 * Math.sin(p * Math.PI));
+    const [x, y] = CHIP_POS[i];
+    el.style.left = x + 'px'; el.style.top = (y + Math.sin(t * 1.3 + i) * 8) + 'px';
+    el.style.transform = `translate(-50%,-50%) scale(${sc}) rotate(${(i % 2 ? 1 : -1) * 4}deg)`;
+    el.style.opacity = 1 - .92 * prog(t, 6.4, 7.0);
+  });
+  const ps = ease(prog(t, 6.5, 7.2));
+  $('sunao').style.opacity = ps;
+  $('sunao').style.transform = `translate(-50%,-50%) scale(${.9 + .1 * ps})`;
+  document.body.style.opacity = 1 - prog(t, 9.5, 10);
+}
+
+ICON.chrome = '<svg viewBox="0 0 48 48"><path d="M24 4a20 20 0 0 1 17.3 10H24a10 10 0 0 0-8.7 5L8.7 15.5A20 20 0 0 1 24 4z" fill="#EA4335"/><path d="M41.3 14A20 20 0 0 1 26 43.9l8.7-15A10 10 0 0 0 33 19h0z" fill="#FBBC05"/><path d="M26 43.9A20 20 0 0 1 8.7 15.5l6.6 3.5A10 10 0 0 0 24 34h0l2 9.9z" fill="#34A853"/><circle cx="24" cy="24" r="8.5" fill="#fff"/><circle cx="24" cy="24" r="6.5" fill="#4285F4"/></svg>';
+const LOGS = [
+  ['yt', 'YouTube 視聴', '焚き火の音 8時間'], ['yt', 'YouTube 検索', 'ハンドドリップ 蒸らし'], ['chrome', 'Chrome 検索', '古民家 断熱 DIY'],
+  ['gem', 'Gemini との会話', '企画書を一緒に作って'], ['nlm', 'NotebookLM', '温冷交代浴と睡眠のノート'], ['g', 'Google 検索', 'スパイス 黄金比率'],
+  ['yt', 'YouTube 視聴', 'ゲームの手触りの作り方'], ['chrome', 'Chrome 閲覧', '移住支援制度のページ'], ['gem', 'Gemini との会話', 'この現象に名前をつけて'],
+  ['nlm', 'NotebookLM', '自分のログ解析ノート'], ['yt', 'YouTube 検索', 'サウナ ととのう 仕組み'], ['g', 'Google 検索', '浅煎り 抽出温度'],
+  ['chrome', 'Chrome 検索', '自作キーボード 肩こり'], ['gem', 'Gemini との会話', '移住の段取りを考えて'], ['yt', 'YouTube 視聴', '深夜の作業用BGM'],
+];
+function buildCount() {
+  let h = '';
+  for (let c = 0; c < 5; c++) {
+    h += `<div class="abs logCol" data-c="${c}" style="left:${c * 390 + 10}px;width:370px">`;
+    for (let r = 0; r < 22; r++) {
+      const [ic, svc, txt] = LOGS[(c * 4 + r * 7) % LOGS.length];
+      h += `<div style="display:flex;gap:14px;align-items:center;margin:0 0 18px;padding:14px 18px;border-radius:14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15)">
+        <div style="width:40px;height:40px;flex:none">${big(ICON[ic], 40)}</div>
+        <div style="min-width:0"><div style="font-size:16px;color:#9aa0a6">${svc}</div><div style="font-size:22px;font-weight:700;white-space:nowrap;overflow:hidden">${txt}</div></div></div>`;
+    }
+    h += '</div>';
+  }
+  $('rain').innerHTML = h;
+  $('rain').style.opacity = .45;
+  $('rain').insertAdjacentHTML('afterend', '<div class="abs" style="inset:0;background:radial-gradient(ellipse 55% 45% at 50% 50%,rgba(0,0,0,.92),rgba(0,0,0,.35) 75%,rgba(0,0,0,0))"></div>');
+}
+function renderCount(t) {
+  document.querySelectorAll('.logCol').forEach((el) => {
+    const c = +el.dataset.c, H = 8 * 104;
+    el.style.top = (-H + ((t * (70 + (c % 3) * 30) + c * 150) % H)) + 'px';
+  });
+  const p = ease(prog(t, 0.3, 3.6));
+  $('num').textContent = Math.round(40686 * p).toLocaleString() + '件';
+  $('numsub').textContent = '4年8ヶ月分の行動記録';
+  $('numsub').style.opacity = prog(t, 3.4, 4.0);
+  $('barfill').style.width = (100 * p) + '%';
+  document.body.style.opacity = prog(t, 0, .3) * (1 - prog(t, 6.6, 7));
+}
+
+const CARDS = [
+  { name: '理系ロースターの設計士', types: ['珈琲を熱力学で解く', '古民家を性能で愛する', '深夜2時の移住計画'] },
+  { name: '1ピクセルの手触り職人', types: ['手触りを数値で解く', '音も物理で捉える', '深夜23時からが本番'] },
+  { name: '深夜の実験台', types: ['スパイスを科学する', 'サウナで整う設計', '数字で裏を取る'] },
+];
+function licHtml(c, id) {
+  return `<div class="lic abs" id="${id}">
+    <div class="ttl">人生免許証<small>WHAT IS YOUR LIFE? LICENSE</small></div>
+    <div style="width:470px;margin-top:14px">
+      <div class="row"><span>氏名</span><span style="font-weight:700">あなた</span></div>
+      <div class="row"><span>二つ名</span><span style="font-weight:900;font-size:26px">${c.name}</span></div>
+      <div class="row"><span>交付</span><span>2026年11月19日</span></div>
+    </div>
+    <div class="photo"><svg viewBox="0 0 210 280" width="210" height="280"><circle cx="105" cy="105" r="42" fill="#000"/><path d="M30 280 C30 190 70 160 105 160 C140 160 180 190 180 280Z" fill="#000"/></svg></div>
+    <div class="types">${c.types.map((x) => `<div>${x}</div>`).join('')}</div>
+  </div>`;
+}
+const BUBS = [['え、深夜2時の移住計画って何？笑', 380, 170], ['それ私もやってる！', 1000, 110], ['今度コーヒー飲もうよ', 1560, 190]];
+function buildShare() {
+  $('cards').innerHTML = CARDS.map((c, i) => licHtml(c, 'c' + i)).join('');
+  $('bubbles').innerHTML = BUBS.map((b, i) => `<div class="bub abs" id="b${i}">${b[0]}</div>`).join('');
+}
+function renderShare(t) {
+  const pos = [[-600, 50, -8], [0, -20, 0], [600, 50, 8]];
+  CARDS.forEach((_, i) => {
+    const el = $('c' + i);
+    const p = ease(prog(t, 0.1 + i * 0.3, 1.1 + i * 0.3));
+    const [x, y, r] = pos[i];
+    el.style.left = (960 + x * p - 380) + 'px';
+    el.style.top = (540 + y + (1 - p) * 700 - 240) + 'px';
+    el.style.transform = `rotate(${r * p}deg) scale(.72)`;
+    el.style.opacity = p;
+  });
+    BUBS.forEach(([, x, y], i) => {
+    const p = prog(t, 2.4 + i * 0.7, 2.8 + i * 0.7);
+    const sc = p <= 0 ? 0 : p < 1 ? ease(p) * (1 + .3 * Math.sin(p * Math.PI)) : 1;
+    const el = $('b' + i);
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    el.style.transform = `translate(-50%,-50%) scale(${sc})`;
+  });
+  document.body.style.opacity = 1 - prog(t, 7.5, 8);
+}
+
+function buildOutro() {
+  $('outroCard').innerHTML = licHtml(CARDS[2], 'oc');
+  $('outroRoll').innerHTML = ['いちばん調べた言葉', 'いちばん見た動画', 'いちばん通った場所', 'いちばん相談したこと']
+    .map((k) => `<div class="credit"><div class="k">${k}</div><div class="v" style="font-size:40px">記録あり</div></div>`).join('');
+}
+function renderOutro(t) {
+  // card shrinks and rises like a credit, then title
+  const p = ease(prog(t, 0.3, 3.2));
+  const oc = $('oc');
+  oc.style.left = (960 - 380) + 'px';
+  oc.style.top = (540 - 240 - 520 * p) + 'px';
+  oc.style.transform = `scale(${.9 - .55 * p})`;
+  oc.style.opacity = 1 - prog(t, 2.6, 3.4);
+  $('outroRoll').style.top = (1080 - 300 * t) + 'px';
+  $('outroRoll').style.opacity = 1 - prog(t, 3, 4);
+  const pt = ease(prog(t, 3.8, 5.5));
+  $('title').style.opacity = pt;
+  $('title').style.transform = `translate(-50%,-50%) scale(${.96 + .04 * pt})`;
+}
+
+const SCENES = {
+  endroll: [buildEndroll, renderEndroll],
+  google: [buildGoogle, renderGoogle],
+  gemini: [buildGemini, renderGemini],
+  trend: [buildTrend, renderTrend],
+  takeout: [buildTakeout, renderTakeout],
+  count: [buildCount, renderCount],
+  share: [buildShare, renderShare],
+  outro: [buildOutro, renderOutro],
+};
+const name = new URLSearchParams(location.search).get('s') || 'endroll';
+$(name).classList.add('on');
+SCENES[name][0]();
+window.render = (t) => { document.body.style.opacity = 1; SCENES[name][1](t); };
+window.render(0);
+</script>
+</body>
+</html>

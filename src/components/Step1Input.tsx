@@ -1,10 +1,11 @@
 import React, { useRef, useState } from 'react';
 import { Upload, Trash2, KeyRound, ChevronDown, ChevronUp } from 'lucide-react';
+import { SAMPLE_DATASETS, SampleDatasetInfo } from '../modules/parser/takeoutParser';
 
 interface Step1InputProps {
   apiKey: string;
   onApiKeyChange: (key: string) => void;
-  onSelectSample: () => void;
+  onSelectSample: (id: SampleDatasetInfo['id']) => void;
   onUploadFiles: (files: File[]) => void;
   errorMessage: string | null;
 }
@@ -18,14 +19,10 @@ export const Step1Input: React.FC<Step1InputProps> = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [stagedFiles, setStagedFiles] = useState<File[]>([]);
-  const [showApiKeyBox, setShowApiKeyBox] = useState(false);
+  const [showApiKeyBox, setShowApiKeyBox] = useState(() => apiKey.trim().length <= 10);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const envKey =
-    ((import.meta.env.VITE_GEMINI_API_KEY as string | undefined) || '').trim();
-  const hasCustomKey = apiKey.trim().length > 10;
-  const hasEnvKey = envKey.length > 10;
-  const isKeyActive = hasCustomKey || hasEnvKey;
+  const isKeyActive = apiKey.trim().length > 10;
 
   const addFilesToStage = (fileList: FileList | File[]) => {
     const incoming = Array.from(fileList);
@@ -55,7 +52,7 @@ export const Step1Input: React.FC<Step1InputProps> = ({
           あなたを、あなたの人生で紹介しよう。
         </h1>
         <p className="text-xs md:text-sm text-neutral-600 leading-relaxed">
-          Google Takeout の行動履歴から、複数サービスを横断した「累計時間・検索回数・無意識の行動クセ」を集計し、イメージイラスト付きの人生の名刺を生成します。データはブラウザ内でのみ処理されます。
+          Google データ エクスポート（Takeout）で書き出した自分の記録を、Gemini が読み解いて「人生免許証」にします。記録の集計はこのブラウザの中だけで行い、Gemini に送る内容は送信前に確認できます。
         </p>
       </div>
 
@@ -154,7 +151,7 @@ export const Step1Input: React.FC<Step1InputProps> = ({
         )}
       </div>
 
-      {/* Collapsible Gemini API Key Box (Optional) */}
+      {/* Gemini API key (required, BYOK) */}
       <div className="border border-neutral-200 rounded-xl overflow-hidden bg-white">
         <button
           type="button"
@@ -164,7 +161,7 @@ export const Step1Input: React.FC<Step1InputProps> = ({
           <div className="flex items-center gap-2.5 text-xs">
             <KeyRound className="w-4 h-4 text-neutral-500" />
             <span className="font-bold text-black">
-              Gemini APIキー設定（任意・自分のキーでAI分析したい場合）
+              Gemini APIキー（必須）
             </span>
             <span
               className={`px-2 py-0.5 rounded text-[10px] font-mono-code border ${
@@ -173,11 +170,7 @@ export const Step1Input: React.FC<Step1InputProps> = ({
                   : 'bg-neutral-100 text-neutral-500 border-neutral-200'
               }`}
             >
-              {hasCustomKey
-                ? 'キー入力済み'
-                : hasEnvKey
-                ? '設定済み (.env適用中)'
-                : '未入力（ローカル分析対応）'}
+              {isKeyActive ? '入力済み' : '未入力'}
             </span>
           </div>
           {showApiKeyBox ? (
@@ -190,14 +183,22 @@ export const Step1Input: React.FC<Step1InputProps> = ({
         {showApiKeyBox && (
           <div className="px-4 pb-4 pt-2 border-t border-neutral-200 space-y-2.5 bg-neutral-50">
             <p className="text-[11px] text-neutral-600 leading-relaxed">
-              Google AI Studio で取得した Gemini API キーを入力すると、AIモデル（Gemini 3.6 / 3.5 Flash等）による高精度なパーソナリティ分析が実行されます。空欄のままでも内蔵のローカル分析エンジンで動作します。キーはお使いのブラウザ（localStorage）にのみ保存されます。
+              Google AI Studio で発行した Gemini API キーを入力してください。この1つのキーで、記録の分析と免許証の写真の生成を行います。写真の生成には課金を有効にしたキーが必要です。キーはこのブラウザ（localStorage）にだけ保存され、ほかのサーバーには送られません。
             </p>
+            <a
+              href="https://aistudio.google.com/apikey"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-block text-[11px] font-bold text-black underline"
+            >
+              Google AI Studio で APIキーを発行する →
+            </a>
             <div className="flex items-center gap-2">
               <input
                 type="password"
                 value={apiKey}
                 onChange={(e) => onApiKeyChange(e.target.value)}
-                placeholder="AIza... または AQ... から始まるAPIキーを入力"
+                placeholder="Gemini API キーを貼り付け"
                 className="flex-1 px-3 py-2 rounded-lg border border-neutral-300 bg-white text-xs font-mono-code text-black focus:outline-none focus:border-black"
               />
               {apiKey && (
@@ -214,18 +215,24 @@ export const Step1Input: React.FC<Step1InputProps> = ({
         )}
       </div>
 
-      {/* Sample Data Button */}
-      <div className="pt-2 border-t border-neutral-200 flex items-center justify-between gap-4">
+      {/* Sample Data Buttons */}
+      <div className="pt-2 border-t border-neutral-200 space-y-3">
         <div className="text-xs text-neutral-500">
           手元にファイルがない場合は、サンプルデータで動作を確認できます。
         </div>
-        <button
-          type="button"
-          onClick={onSelectSample}
-          className="px-4 py-2 rounded-lg border border-black bg-white hover:bg-black hover:text-white text-xs font-bold text-black transition-colors shrink-0 cursor-pointer"
-        >
-          サンプルデータで試す →
-        </button>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {SAMPLE_DATASETS.map((ds) => (
+            <button
+              key={ds.id}
+              type="button"
+              onClick={() => onSelectSample(ds.id)}
+              className="text-left px-4 py-3 rounded-lg border border-black bg-white hover:bg-black hover:text-white text-black transition-colors cursor-pointer"
+            >
+              <div className="text-xs font-bold">{ds.label} →</div>
+              <div className="text-[11px] opacity-60 mt-0.5">{ds.description}</div>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

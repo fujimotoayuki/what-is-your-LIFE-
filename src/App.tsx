@@ -1,29 +1,26 @@
-import React, { useEffect, useState } from 'react';
-import { Loader2, CheckCircle2, Circle } from 'lucide-react';
+import React, { useState } from 'react';
+import { AlertTriangle, CheckCircle2, Circle, Loader2 } from 'lucide-react';
+import { AggregatedProfile, LifeCardProposal } from './types/life';
 import {
-  AggregatedProfile,
-  LifeCardProposal,
-  NormalizedEvent,
-} from './types/life';
-import {
-  loadSampleLifeDataset,
+  loadSampleDatasetById,
   parseUploadedTakeoutFiles,
+  SampleDatasetInfo,
 } from './modules/parser/takeoutParser';
-import { aggregateEvents } from './modules/parser/aggregator';
-import {
-  AnalysisCustomOptions,
-  analyzeProfileWithGemini,
-  buildDynamicFallbackProposal,
-  validateLifeCardProposal,
-} from './modules/analyzer/geminiAnalyzer';
+import { analyzeProfileWithGemini } from './modules/analyzer/geminiAnalyzer';
 import { Step1Input } from './components/Step1Input';
-import { Step2AnalyzeSelect } from './components/Step2AnalyzeSelect';
-import { Step3LifeCard } from './components/Step3LifeCard';
+import { LicenseCard } from './components/LicenseCard';
+import { SendReview } from './components/SendReview';
 
-type StepNumber = 1 | 2 | 3;
+/**
+ * Flow: 1. upload ZIP → parse + privacy filter + aggregate (local)
+ *       → 2. user reviews what will be sent and approves
+ *       → 3. Gemini finds 6 traits → 4. license card (photo = image generated from the traits).
+ */
+type Step = 1 | 2 | 3 | 4;
+type Phase = 'parse' | 'analyze' | 'error';
 
 export const App: React.FC = () => {
-  const [step, setStep] = useState<StepNumber>(1);
+  const [step, setStep] = useState<Step>(1);
   const [apiKey, setApiKey] = useState<string>(() => {
     try {
       return localStorage.getItem('WIYL_GEMINI_API_KEY') || '';
@@ -31,20 +28,14 @@ export const App: React.FC = () => {
       return '';
     }
   });
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  const [normalizedEvents, setNormalizedEvents] = useState<NormalizedEvent[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [profile, setProfile] = useState<AggregatedProfile | null>(null);
   const [proposal, setProposal] = useState<LifeCardProposal | null>(null);
+  const [phase, setPhase] = useState<Phase>('parse');
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [logs, setLogs] = useState<string[]>([]);
 
-  const [customOptions, setCustomOptions] = useState<AnalysisCustomOptions>({
-    tonePreset: 'sns_pop',
-    customInstruction: '',
-  });
-
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisPhase, setAnalysisPhase] = useState<1 | 2 | 3>(1);
-  const [progressLogs, setProgressLogs] = useState<string[]>([]);
+  const log = (msg: string) => setLogs((prev) => [...prev, msg]);
 
   const handleApiKeyChange = (key: string) => {
     setApiKey(key);
@@ -55,320 +46,196 @@ export const App: React.FC = () => {
     }
   };
 
-  const appendLog = (msg: string) => {
-    setProgressLogs((prev) => [...prev, msg]);
-  };
-
-  const runAnalysisPipeline = async (
-    events: NormalizedEvent[],
-    aggProfile: AggregatedProfile,
-    opts: AnalysisCustomOptions = customOptions
-  ) => {
-    setNormalizedEvents(events);
-    setProfile(aggProfile);
+  const analyze = async (agg: AggregatedProfile) => {
+    setPhase('analyze');
+    setAnalysisError(null);
     setProposal(null);
-    setStep(2);
-    setIsAnalyzing(true);
-    setAnalysisPhase(2);
-    appendLog(
-      `全 ${events.length.toLocaleString()} 件の行動履歴を統合・横断集計しました`
-    );
-
     try {
-      await new Promise((r) => setTimeout(r, 450));
-      setAnalysisPhase(3);
-      const result = await analyzeProfileWithGemini(
-        aggProfile,
-        apiKey,
-        (msg) => {
-          appendLog(msg);
-        },
-        opts
-      );
-      await new Promise((r) => setTimeout(r, 500));
+      const result = await analyzeProfileWithGemini(agg, apiKey, log);
       setProposal(result);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      appendLog(`エラー: ${msg}`);
-    } finally {
-      setIsAnalyzing(false);
+      setStep(4);
+    } catch (e) {
+      setAnalysisError((e as Error).message);
+      setPhase('error');
     }
   };
 
-  const handleSelectSample = async () => {
-    setErrorMessage(null);
-    setIsAnalyzing(true);
-    setAnalysisPhase(1);
-    setProgressLogs(['サンプルデータセットを展開しています...']);
-    setStep(2);
-
-    await new Promise((r) => setTimeout(r, 450));
-    const { normalizedEvents: evs, aggregatedProfile: agg } =
-      loadSampleLifeDataset();
-    await runAnalysisPipeline(evs, agg, customOptions);
-  };
-
-  const handleUploadFiles = async (files: File[]) => {
-    setErrorMessage(null);
-    setIsAnalyzing(true);
-    setAnalysisPhase(1);
-    setProgressLogs([
-      `${files.length}個のファイル（${files.map((f) => f.name).join(', ')}）の読み込みを開始しました...`,
-    ]);
-    setStep(2);
-
+  const loadAndAnalyze = async (
+    firstLog: string,
+    load: () => Promise<{ aggregatedProfile: AggregatedProfile }>
+  ) => {
+    if (apiKey.trim().length <= 10) {
+      setUploadError('先に Gemini APIキーを入力してください（下の「Gemini APIキー」欄）。');
+      return;
+    }
+    setUploadError(null);
+    setLogs([firstLog]);
+    setPhase('parse');
+    setProfile(null);
+    setStep(3);
     try {
-      await new Promise((r) => setTimeout(r, 300));
-      const { normalizedEvents: evs, aggregatedProfile: agg } =
-        await parseUploadedTakeoutFiles(files, (msg) => {
-          appendLog(msg);
-        });
-      await runAnalysisPipeline(evs, agg, customOptions);
-    } catch (err) {
-      const msg =
-        err instanceof Error
-          ? err.message
-          : 'ファイルの解析中にエラーが発生しました。';
-      setIsAnalyzing(false);
+      const { aggregatedProfile } = await load();
+      setProfile(aggregatedProfile);
+      log(
+        `全 ${aggregatedProfile.totalEvents.toLocaleString()} 件を集計（個人情報・センシティブ項目 ${aggregatedProfile.privacyStats.filteredCount.toLocaleString()} 件を除外）`
+      );
+      setStep(2); // wait for the user's approval before sending anything to Gemini
+    } catch (e) {
+      setUploadError((e as Error).message || 'ファイルの解析中にエラーが発生しました。');
       setStep(1);
-      setErrorMessage(msg);
     }
   };
 
-  const handleReanalyze = async (opts?: AnalysisCustomOptions) => {
-    if (!profile) return;
-    setProgressLogs(['再解析を開始しています...']);
-    const freshProfile =
-      normalizedEvents.length > 0
-        ? aggregateEvents(
-            normalizedEvents,
-            profile.privacyStats,
-            profile.datasetLabel,
-            profile.sourceFiles
-          )
-        : profile;
-    await runAnalysisPipeline(
-      normalizedEvents,
-      freshProfile,
-      opts ?? customOptions
+  const handleUploadFiles = (files: File[]) =>
+    loadAndAnalyze(`${files.map((f) => f.name).join(', ')} を読み込んでいます...`, () =>
+      parseUploadedTakeoutFiles(files, log)
     );
+
+  const handleSelectSample = (id: SampleDatasetInfo['id']) =>
+    loadAndAnalyze('サンプルデータを読み込んでいます...', () => loadSampleDatasetById(id, log));
+
+  const handleReanalyze = () => {
+    if (!profile) return;
+    setLogs(['同じデータでもう一度分析します（毎回ちがう結果になります）...']);
+    setStep(3);
+    analyze(profile);
   };
 
-  useEffect(() => {
-    if (
-      profile &&
-      normalizedEvents.length > 0 &&
-      proposal &&
-      proposal.discoveries.length > 0 &&
-      (!profile.aiRawDigest?.timeOfDayBreakdown ||
-        proposal.discoveries[0].id !== 'disc-soft-1')
-    ) {
-      const freshProfile = aggregateEvents(
-        normalizedEvents,
-        profile.privacyStats,
-        profile.datasetLabel,
-        profile.sourceFiles
-      );
-      setProfile(freshProfile);
-      const upgraded = validateLifeCardProposal(
-        buildDynamicFallbackProposal(freshProfile, customOptions),
-        freshProfile
-      );
-      setProposal(upgraded);
-    }
-  }, [profile, normalizedEvents, proposal, customOptions]);
+  const approveSend = () => {
+    if (!profile) return;
+    log('ユーザーの承認を受けて Gemini に送信します');
+    setStep(3);
+    analyze(profile);
+  };
+
+  const restart = () => {
+    setStep(1);
+    setProfile(null);
+    setProposal(null);
+  };
+
+  const steps: { num: Step; label: string }[] = [
+    { num: 1, label: '1. アップロード' },
+    { num: 2, label: '2. 送信の確認' },
+    { num: 3, label: '3. 解析' },
+    { num: 4, label: '4. 免許証' },
+  ];
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-black">
-      {/* Minimal Monochrome Header */}
       <header className="border-b border-neutral-200 bg-white">
         <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => {
-              if (!isAnalyzing) setStep(1);
-            }}
-            className="font-bold text-sm tracking-tight text-black cursor-pointer"
-          >
-            What is your LIFE?
-          </button>
-
-          <nav className="flex items-center gap-6 text-xs">
-            {[
-              { num: 1, label: '1. 入力' },
-              { num: 2, label: '2. 選択' },
-              { num: 3, label: '3. 名刺' },
-            ].map((s) => {
-              const active = step === s.num;
-              const canJump =
-                !isAnalyzing &&
-                (s.num === 1 ||
-                  (s.num === 2 && profile !== null) ||
-                  (s.num === 3 && proposal !== null));
-
-              return (
-                <button
-                  key={s.num}
-                  type="button"
-                  disabled={!canJump}
-                  onClick={() => canJump && setStep(s.num as StepNumber)}
-                  className={`py-1 transition-colors ${
-                    active
-                      ? 'font-bold text-black border-b-2 border-black'
-                      : canJump
-                      ? 'text-neutral-500 hover:text-black cursor-pointer'
-                      : 'text-neutral-300 cursor-not-allowed'
-                  }`}
-                >
-                  {s.label}
-                </button>
-              );
-            })}
+          <span className="font-bold text-sm tracking-tight">What is your LIFE?</span>
+          <nav className="flex items-center gap-5 text-xs">
+            {steps.map((s) => (
+              <span
+                key={s.num}
+                className={
+                  step === s.num
+                    ? 'font-bold border-b-2 border-black py-1'
+                    : 'text-neutral-400 py-1'
+                }
+              >
+                {s.label}
+              </span>
+            ))}
           </nav>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 max-w-3xl w-full mx-auto px-6 py-10">
-        {isAnalyzing ? (
-          <div className="py-12 space-y-8">
-            <div className="border border-black rounded-2xl p-8 md:p-10 bg-white space-y-8">
-              {/* Top Spinner & Title */}
-              <div className="flex items-center gap-4">
-                <div className="w-11 h-11 rounded-xl bg-black text-white flex items-center justify-center shrink-0">
+        {step === 1 && (
+          <Step1Input
+            apiKey={apiKey}
+            onApiKeyChange={handleApiKeyChange}
+            onSelectSample={handleSelectSample}
+            onUploadFiles={handleUploadFiles}
+            errorMessage={uploadError}
+          />
+        )}
+
+        {step === 2 && profile && (
+          <SendReview profile={profile} onApprove={approveSend} onCancel={restart} />
+        )}
+
+        {step === 3 && (
+          <div className="border border-black rounded-2xl p-8 space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="w-11 h-11 rounded-xl bg-black text-white flex items-center justify-center shrink-0">
+                {phase === 'error' ? (
+                  <AlertTriangle className="w-5 h-5" />
+                ) : (
                   <Loader2 className="w-5 h-5 animate-spin" />
-                </div>
-                <div className="space-y-1">
-                  <div className="text-[11px] font-mono-code uppercase tracking-widest text-neutral-500">
-                    ANALYZING YOUR GOOGLE TAKEOUT
-                  </div>
-                  <h2 className="text-xl md:text-2xl font-bold text-black">
-                    行動履歴データを解析中です...
-                  </h2>
-                </div>
+                )}
               </div>
+              <h2 className="text-xl font-bold">
+                {phase === 'error' ? '分析できませんでした' : '行動履歴を解析中です...'}
+              </h2>
+            </div>
 
-              {/* Progress Bar */}
-              <div className="space-y-2">
-                <div className="w-full h-2 rounded-full bg-neutral-100 overflow-hidden border border-neutral-200">
+            <div className="space-y-2.5 text-sm">
+              {[
+                { key: 'parse', label: 'ZIPの展開・個人情報の除外・横断集計' },
+                { key: 'analyze', label: 'Geminiが6つの特徴を分析（数十秒〜数分）' },
+              ].map((item, i) => {
+                const done = i === 0 ? phase !== 'parse' : false;
+                const current = phase === item.key;
+                return (
                   <div
-                    className="h-full bg-black transition-all duration-500"
-                    style={{
-                      width:
-                        analysisPhase === 1
-                          ? '35%'
-                          : analysisPhase === 2
-                          ? '68%'
-                          : '92%',
-                    }}
-                  />
-                </div>
-                <div className="flex justify-between text-[11px] font-mono-code text-neutral-500">
-                  <span>STEP {analysisPhase} / 3</span>
-                  <span>
-                    {analysisPhase === 1
-                      ? 'ZIP展開・履歴抽出中'
-                      : analysisPhase === 2
-                      ? '5サービス横断集計中'
-                      : '6つの特徴・キャッチコピー生成中'}
-                  </span>
-                </div>
-              </div>
-
-              {/* 3-Step Checklist */}
-              <div className="space-y-3 pt-2 border-t border-neutral-200">
-                {[
-                  {
-                    phase: 1,
-                    title:
-                      '1. ZIPファイルの展開と5サービス（YouTube・検索・マップ・Gemini・NotebookLM）の抽出',
-                  },
-                  {
-                    phase: 2,
-                    title:
-                      '2. サービス横断集計・NotebookLM資料カウント・無意識のスキップ時間の算出',
-                  },
-                  {
-                    phase: 3,
-                    title:
-                      '3. 行動と思考の癖から「6つの特徴」と「名前・キャッチフレーズ」を詳細生成',
-                  },
-                ].map((item) => {
-                  const done = analysisPhase > item.phase;
-                  const current = analysisPhase === item.phase;
-                  return (
-                    <div
-                      key={item.phase}
-                      className={`flex items-center gap-3 text-xs md:text-sm ${
-                        done
-                          ? 'text-black font-medium'
-                          : current
-                          ? 'text-black font-bold'
-                          : 'text-neutral-400'
-                      }`}
-                    >
-                      {done ? (
-                        <CheckCircle2 className="w-4 h-4 text-black shrink-0" />
-                      ) : current ? (
-                        <Loader2 className="w-4 h-4 text-black animate-spin shrink-0" />
-                      ) : (
-                        <Circle className="w-4 h-4 text-neutral-300 shrink-0" />
-                      )}
-                      <span>{item.title}</span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Live Log Console */}
-              <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4 space-y-1.5 max-h-48 overflow-y-auto font-mono-code text-[11px] text-neutral-600">
-                {progressLogs.map((log, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <span className="text-neutral-400 select-none">&gt;</span>
-                    <span>{log}</span>
+                    key={item.key}
+                    className={`flex items-center gap-3 ${done || current ? 'text-black' : 'text-neutral-400'}`}
+                  >
+                    {done ? (
+                      <CheckCircle2 className="w-4 h-4" />
+                    ) : current ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Circle className="w-4 h-4" />
+                    )}
+                    <span className={current ? 'font-bold' : ''}>{item.label}</span>
                   </div>
-                ))}
+                );
+              })}
+            </div>
+
+            {phase === 'error' && analysisError && (
+              <div className="space-y-3">
+                <p className="text-sm text-red-600">{analysisError}</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => profile && analyze(profile)}
+                    className="px-4 py-2 rounded-lg bg-black text-white text-xs font-bold cursor-pointer"
+                  >
+                    もう一度分析する
+                  </button>
+                  <button
+                    type="button"
+                    onClick={restart}
+                    className="px-4 py-2 rounded-lg border border-neutral-300 text-xs cursor-pointer"
+                  >
+                    最初に戻る
+                  </button>
+                </div>
               </div>
+            )}
+
+            <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4 space-y-1 max-h-56 overflow-y-auto font-mono-code text-[11px] text-neutral-600">
+              {logs.map((l, i) => (
+                <div key={i}>&gt; {l}</div>
+              ))}
             </div>
           </div>
-        ) : (
-          <>
-            {step === 1 && (
-              <Step1Input
-                apiKey={apiKey}
-                onApiKeyChange={handleApiKeyChange}
-                onSelectSample={handleSelectSample}
-                onUploadFiles={handleUploadFiles}
-                errorMessage={errorMessage}
-              />
-            )}
+        )}
 
-            {step === 2 && profile && (
-              <Step2AnalyzeSelect
-                isAnalyzing={isAnalyzing}
-                progressLogs={progressLogs}
-                normalizedEvents={normalizedEvents}
-                profile={profile}
-                proposal={proposal}
-                customOptions={customOptions}
-                onChangeCustomOptions={setCustomOptions}
-                onUpdateProposal={setProposal}
-                onReanalyze={handleReanalyze}
-                onBack={() => setStep(1)}
-                onProceedToCard={() => setStep(3)}
-              />
-            )}
-
-            {step === 3 && profile && proposal && (
-              <Step3LifeCard
-                profile={profile}
-                proposal={proposal}
-                normalizedEvents={normalizedEvents}
-                onBackToStep2={() => setStep(2)}
-                onResetToStep1={() => setStep(1)}
-              />
-            )}
-          </>
+        {step === 4 && profile && proposal && (
+          <LicenseCard
+            profile={profile}
+            proposal={proposal}
+            apiKey={apiKey}
+            onReanalyze={handleReanalyze}
+            onRestart={restart}
+          />
         )}
       </main>
     </div>
